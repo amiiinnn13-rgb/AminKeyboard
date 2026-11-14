@@ -76,6 +76,8 @@ jobs:
           if not key_bytes:
               raise SystemExit("Decoded keystore is empty")
           key_path.write_bytes(key_bytes)
+          import hashlib
+          print("Keystore SHA256: " + hashlib.sha256(key_bytes).hexdigest())
 
           def escape_property(value):
               value = value.replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n").replace("\r", "\\r")

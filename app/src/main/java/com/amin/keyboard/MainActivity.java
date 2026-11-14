@@ -160,6 +160,7 @@ public class MainActivity extends Activity {
         status.setText("تم: " + themes[theme] +
                 "\nردیف اعداد: " + (prefs.getBoolean("number_row", true) ? "روشن" : "خاموش") +
                 "\nحالت: " + modes[mode] +
+                "\nارتفاع کیبورد: " + heights[height] +
                 "\nاندازه نوشته کلیدها: " + Math.round(scale * 100) + "%" +
                 "\nمیانبرهای ذخیره‌شده: " + shortcuts);
     }

@@ -24,6 +24,7 @@ public class AminKeyboardView extends LinearLayout {
     private boolean shifted = false;
     private boolean capsLock = false;
     private int page = 0;
+    private int emojiCategory = 1;
     private int theme;
     private boolean numberRow;
     private float keyScale = 1.3f;
@@ -93,15 +94,25 @@ public class AminKeyboardView extends LinearLayout {
         reloadPrefs();
         removeAllViews();
         setBackgroundColor(backgrounds[theme]);
-        int rows = (page == 0 && !numberRow) ? 5 : 6;
+        int rows = page == 2 ? 7 : ((page == 0 && !numberRow) ? 5 : 6);
         int rowHeight = dp((keyboardHeightDp() - 80) / (float) rows);
         addToolbar();
 
         if (page == 2 || page == 1) {
-            String[][] data = page == 2 ? emojis : symbols;
+            if (page == 2) addEmojiCategories();
+            String[][] data = page == 2 ? getEmojiRows() : symbols;
             for (String[] row : data) {
                 LinearLayout line = newRow();
-                for (String key : row) addKey(line, key, 1, () -> service.typeTextRaw(key), false);
+                for (String key : row) {
+                    if (page == 2) {
+                        addKey(line, key, 1, () -> {
+                            service.typeTextRaw(key);
+                            rememberEmoji(key);
+                        }, false);
+                    } else {
+                        addKey(line, key, 1, () -> service.typeTextRaw(key), false);
+                    }
+                }
                 addView(line, new LayoutParams(-1, rowHeight));
             }
             addBottomRow(rowHeight);
@@ -160,6 +171,81 @@ public class AminKeyboardView extends LinearLayout {
         addKey(bottom, "فاصله", 40, service::typeSpaceWithShortcut, false);
         addKey(bottom, "↵", 10, () -> service.typeTextRaw("\n"), true);
         addView(bottom, new LayoutParams(-1, rowHeight));
+    }
+
+    private void addEmojiCategories() {
+        HorizontalScrollView scroller = new HorizontalScrollView(getContext());
+        scroller.setHorizontalScrollBarEnabled(false);
+        LinearLayout categories = new LinearLayout(getContext());
+        categories.setOrientation(HORIZONTAL);
+        categories.setGravity(Gravity.CENTER_VERTICAL);
+        String[] labels = {"⏱", "😀", "❤️", "🌿", "🎉"};
+        for (int i = 0; i < labels.length; i++) {
+            final int selected = i;
+            Button button = new Button(getContext());
+            button.setText(labels[i]);
+            button.setAllCaps(false);
+            button.setTextSize(17);
+            button.setMinWidth(0);
+            button.setMinimumWidth(0);
+            button.setPadding(dp(12), 0, dp(12), 0);
+            button.setBackgroundTintList(ColorStateList.valueOf(
+                    emojiCategory == i ? accents[theme] : Color.WHITE));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(32));
+            lp.setMargins(dp(2), 0, dp(2), 0);
+            categories.addView(button, lp);
+            button.setOnClickListener(v -> {
+                emojiCategory = selected;
+                render();
+            });
+        }
+        scroller.addView(categories, new HorizontalScrollView.LayoutParams(-2, -1));
+        addView(scroller, new LayoutParams(-1, dp(36)));
+    }
+
+    private String[][] getEmojiRows() {
+        String[] source;
+        if (emojiCategory == 0) {
+            String recent = prefs.getString("emoji_recent", "");
+            source = recent.isEmpty() ? new String[0] : recent.split("\\|");
+            if (source.length == 0) source = emojis[0];
+        } else if (emojiCategory == 1) {
+            source = flatten(emojis);
+        } else if (emojiCategory == 2) {
+            source = new String[]{"❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💕","💞","💓","💗","💖","💘","💝","💟","❣️","💔","❤️‍🔥","💋","😍","🥰","😘"};
+        } else if (emojiCategory == 3) {
+            source = new String[]{"🌹","🌷","🌸","🌺","🌻","🌼","🌱","🌿","🍀","🍃","🌳","🌴","🌵","🌲","🌈","☀️","🌙","⭐","🌟","🌊","❄️","🔥","🌧️","☁️"};
+        } else {
+            source = new String[]{"🎉","🎊","🎁","🏆","⚽","🎮","🎧","🎵","📚","✏️","📌","📎","💡","⌚","📱","💻","🚗","✈️","🏠","☕","🍎","🍕","🍰","🎈"};
+        }
+        int count = Math.min(source.length, 32);
+        String[][] rows = new String[(count + 7) / 8][];
+        for (int i = 0; i < rows.length; i++) {
+            int from = i * 8;
+            int to = Math.min(count, from + 8);
+            rows[i] = new String[to - from];
+            System.arraycopy(source, from, rows[i], 0, to - from);
+        }
+        return rows;
+    }
+
+    private String[] flatten(String[][] groups) {
+        java.util.ArrayList<String> all = new java.util.ArrayList<>();
+        for (String[] row : groups) java.util.Collections.addAll(all, row);
+        return all.toArray(new String[0]);
+    }
+
+    private void rememberEmoji(String emoji) {
+        java.util.ArrayList<String> recent = new java.util.ArrayList<>();
+        String stored = prefs.getString("emoji_recent", "");
+        if (!stored.isEmpty()) {
+            for (String item : stored.split("\\|")) {
+                if (!item.equals(emoji) && !item.isEmpty()) recent.add(item);
+            }
+        }
+        recent.add(0, emoji);
+        while (recent.size() > 24) recent.remove(recent.size() - 1);
+        prefs.edit().putString("emoji_recent", android.text.TextUtils.join("|", recent)).apply();
     }
 
     private void addToolbar() {

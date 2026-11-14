@@ -202,7 +202,7 @@ public class AminImeService extends InputMethodService {
                 java.util.Set<String> shortcuts = getSharedPreferences("typo_settings", MODE_PRIVATE)
                         .getStringSet("text_shortcuts", java.util.Collections.emptySet());
                 for (String entry : shortcuts) {
-                    int separator = entry.indexOf('\u001F');
+                    int separator = entry.indexOf('\t');
                     if (separator > 0 && entry.substring(0, separator).equals(trigger)) {
                         String expansion = entry.substring(separator + 1);
                         ic.deleteSurroundingText(trigger.length(), 0);

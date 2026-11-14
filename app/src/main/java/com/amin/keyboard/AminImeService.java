@@ -1,7 +1,9 @@
 package com.amin.keyboard;
 
 import android.inputmethodservice.InputMethodService;
-import android.view.View;\nimport android.view.Gravity;\nimport android.widget.FrameLayout;
+import android.view.View;
+import android.view.Gravity;
+import android.widget.FrameLayout;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.text.TextUtils;

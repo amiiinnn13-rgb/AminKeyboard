@@ -87,7 +87,11 @@ public class AminKeyboardView extends LinearLayout {
 
     private int keyboardHeightDp() {
         float h = getResources().getDisplayMetrics().heightPixels / getResources().getDisplayMetrics().density;
-        return Math.round(Math.max(330f, Math.min(370f, h * 0.44f)));
+        int mode = prefs.getInt("keyboard_height", 1);
+        float ratio = mode == 0 ? 0.39f : (mode == 2 ? 0.49f : 0.44f);
+        float minimum = mode == 0 ? 300f : (mode == 2 ? 370f : 330f);
+        float maximum = mode == 0 ? 340f : (mode == 2 ? 420f : 370f);
+        return Math.round(Math.max(minimum, Math.min(maximum, h * ratio)));
     }
 
     private void render() {

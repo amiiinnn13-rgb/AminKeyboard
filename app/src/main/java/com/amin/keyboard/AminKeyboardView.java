@@ -94,7 +94,7 @@ public class AminKeyboardView extends LinearLayout {
         reloadPrefs();
         removeAllViews();
         setBackgroundColor(backgrounds[theme]);
-        int rows = page == 2 ? 7 : ((page == 0 && !numberRow) ? 5 : 6);
+        int rows = page == 2 ? (emojiCategory == 1 ? 7 : 6) : ((page == 0 && !numberRow) ? 5 : 6);
         int rowHeight = dp((keyboardHeightDp() - 80) / (float) rows);
         addToolbar();
 
@@ -208,7 +208,7 @@ public class AminKeyboardView extends LinearLayout {
         if (emojiCategory == 0) {
             String recent = prefs.getString("emoji_recent", "");
             source = recent.isEmpty() ? new String[0] : recent.split("\\|");
-            if (source.length == 0) source = emojis[0];
+            if (source.length == 0) source = new String[]{"😀","😂","😍","🥰","👍","🙏","❤️","✨"};
         } else if (emojiCategory == 1) {
             source = flatten(emojis);
         } else if (emojiCategory == 2) {

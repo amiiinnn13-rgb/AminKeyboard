@@ -1,5 +1,11 @@
 plugins { id 'com.android.application' }
 
+def releaseKeystoreProperties = new Properties()
+def releaseKeystorePropertiesFile = rootProject.file('keystore.properties')
+if (releaseKeystorePropertiesFile.exists()) {
+    releaseKeystorePropertiesFile.withInputStream { releaseKeystoreProperties.load(it) }
+}
+
 android {
     namespace 'com.amin.keyboard'
     compileSdk 35
@@ -8,12 +14,45 @@ android {
         applicationId 'com.amin.keyboard'
         minSdk 23
         targetSdk 35
-        versionCode 1
-        versionName '1.0'
+        versionCode 100
+        versionName '1.0.0'
+    }
+
+    signingConfigs {
+        release {
+            if (releaseKeystorePropertiesFile.exists()) {
+                storeFile rootProject.file(releaseKeystoreProperties['storeFile'])
+                storePassword releaseKeystoreProperties['storePassword']
+                keyAlias releaseKeystoreProperties['keyAlias']
+                keyPassword releaseKeystoreProperties['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (releaseKeystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+}
+
+// Decode the checked-in Typo launcher artwork before Android resources are processed.
+tasks.register('decodeLauncherIcon') {
+    doLast {
+        def encodedIcon = file('src/main/assets/typo_icon.jpg.b64').getText('UTF-8').trim()
+        def iconFile = file('src/main/res/mipmap-xhdpi/ic_launcher.jpg')
+        iconFile.parentFile.mkdirs()
+        iconFile.bytes = encodedIcon.decodeBase64()
+    }
+}
+
+tasks.named('preBuild').configure {
+    dependsOn 'decodeLauncherIcon'
 }

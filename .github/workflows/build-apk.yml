@@ -1,4 +1,4 @@
-name: Build Amin Keyboard APK
+name: Build Typo Keyboard APK
 
 on:
   workflow_dispatch:
@@ -41,9 +41,88 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
 
-      - name: Upload APK
+      - name: Verify debug APK output
+        run: test -s app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: AminKeyboard-debug-apk
+          name: Typo-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Prepare private release signing key
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TYPO_KEYSTORE_BASE64: ${{ secrets.TYPO_KEYSTORE_BASE64 }}
+          TYPO_STORE_PASSWORD: ${{ secrets.TYPO_STORE_PASSWORD }}
+          TYPO_KEY_ALIAS: ${{ secrets.TYPO_KEY_ALIAS }}
+          TYPO_KEY_PASSWORD: ${{ secrets.TYPO_KEY_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import os, base64
+          from pathlib import Path
+
+          names = ["TYPO_KEYSTORE_BASE64", "TYPO_STORE_PASSWORD", "TYPO_KEY_ALIAS", "TYPO_KEY_PASSWORD"]
+          missing = [name for name in names if not os.environ.get(name)]
+          if missing:
+              raise SystemExit("Missing GitHub Actions secrets: " + ", ".join(missing))
+
+          key_path = Path(os.environ["RUNNER_TEMP"]) / "typo-release-key.jks"
+          try:
+              key_bytes = base64.b64decode(os.environ["TYPO_KEYSTORE_BASE64"], validate=True)
+          except Exception as exc:
+              raise SystemExit("TYPO_KEYSTORE_BASE64 is not valid Base64") from exc
+          if not key_bytes:
+              raise SystemExit("Decoded keystore is empty")
+          key_path.write_bytes(key_bytes)
+          import hashlib
+          print("Keystore SHA256: " + hashlib.sha256(key_bytes).hexdigest())
+
+          def escape_property(value):
+              value = value.replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n").replace("\r", "\\r")
+              value = value.replace(":", "\\:").replace("=", "\\=")
+              if value.startswith(" "):
+                  value = "\\ " + value[1:]
+              return value
+
+          props = {
+              "storeFile": str(key_path),
+              "storePassword": os.environ["TYPO_STORE_PASSWORD"],
+              "keyAlias": os.environ["TYPO_KEY_ALIAS"],
+              "keyPassword": os.environ["TYPO_KEY_PASSWORD"],
+          }
+          Path("keystore.properties").write_text(
+              "".join(f"{k}={escape_property(v)}\n" for k, v in props.items()),
+              encoding="ISO-8859-1"
+          )
+          print("Private signing material prepared on the temporary runner.")
+          PY
+
+      - name: Validate keystore password
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TYPO_STORE_PASSWORD: ${{ secrets.TYPO_STORE_PASSWORD }}
+          TYPO_KEY_ALIAS: ${{ secrets.TYPO_KEY_ALIAS }}
+        run: |
+          echo "TYPO_STORE_PASSWORD length: ${#TYPO_STORE_PASSWORD}"
+          keytool -list -keystore "$RUNNER_TEMP/typo-release-key.jks" -storepass "$TYPO_STORE_PASSWORD" -alias "$TYPO_KEY_ALIAS"
+          echo "Keystore password and alias validated."
+
+      - name: Build signed release APK
+        if: github.event_name == 'workflow_dispatch'
+        run: gradle --no-daemon assembleRelease
+
+      - name: Verify release APK signature
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          test -s app/build/outputs/apk/release/app-release.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload signed release APK
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Typo-release-signed-apk
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error

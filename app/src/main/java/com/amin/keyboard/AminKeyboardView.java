@@ -154,10 +154,9 @@ public class AminKeyboardView extends LinearLayout {
         addKey(bottom, english ? "فا" : "EN", 10, () -> {
             english = !english; service.setEnglish(english); shifted = false; capsLock = false; page = 0; render();
         }, true);
-        addKey(bottom, "،", 8, () -> service.typeTextRaw("،"), false);
-        addKey(bottom, "فاصله", 36, () -> service.typeTextRaw(" "), false);
-        addKey(bottom, "⌫", 10, service::backspace, true);
-        addKey(bottom, "↵", 10, () -> service.typeTextRaw("\n"), true);
+        addDiacriticsKey(bottom);
+        addKey(bottom, "فاصله", 40, () -> service.typeTextRaw(" "), false);
+        addKey(bottom, "↵", 10, () -> service.typeTextRaw("\\n"), true);
         addView(bottom, new LayoutParams(-1, rowHeight));
     }
 
@@ -174,6 +173,7 @@ public class AminKeyboardView extends LinearLayout {
         addToolButton(tools, "انتخاب همه", () -> performEditorAction(android.R.id.selectAll));
         addToolButton(tools, "برش", () -> performEditorAction(android.R.id.cut));
         addToolButton(tools, "کپی", () -> performEditorAction(android.R.id.copy));
+        addToolButton(tools, "⚙", () -> getContext().startActivity(new android.content.Intent(getContext(), MainActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)));
         addToolButton(tools, "↔", () -> {
             english = !english;
             service.setEnglish(english);

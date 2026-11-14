@@ -10,6 +10,8 @@ import android.text.TextUtils;
 
 public class AminImeService extends InputMethodService {
     private boolean english = false;
+    private EditorInfo currentEditorInfo;
+    private AminKeyboardView keyboardView;
     private static final String TATWEEL = "ــــ"; // exactly four U+0640 characters
     private char lastTypedChar = 0;
     private boolean hasLastTypedChar = false;
@@ -19,6 +21,7 @@ public class AminImeService extends InputMethodService {
     public View onCreateInputView() {
         FrameLayout container = new FrameLayout(this);
         AminKeyboardView keyboard = new AminKeyboardView(this, this);
+        keyboardView = keyboard;
         int mode = getSharedPreferences("typo_settings", MODE_PRIVATE).getInt("one_hand", 0);
         int width = mode == 0 ? FrameLayout.LayoutParams.MATCH_PARENT
                 : Math.round(getResources().getDisplayMetrics().widthPixels * 0.78f);
@@ -32,12 +35,15 @@ public class AminImeService extends InputMethodService {
     @Override
     public void onStartInput(EditorInfo attribute, boolean restarting) {
         super.onStartInput(attribute, restarting);
+        currentEditorInfo = attribute;
         clearTypingCache();
+        if (keyboardView != null) keyboardView.onEditorInfoChanged();
     }
 
     @Override
     public void onFinishInput() {
         super.onFinishInput();
+        currentEditorInfo = null;
         clearTypingCache();
     }
 
@@ -218,6 +224,27 @@ public class AminImeService extends InputMethodService {
             }
         }
         typeTextRaw(" ");
+    }
+
+    boolean isSearchAction() {
+        return currentEditorInfo != null
+                && (currentEditorInfo.imeOptions & EditorInfo.IME_MASK_ACTION)
+                == EditorInfo.IME_ACTION_SEARCH;
+    }
+
+    void pressEnter() {
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null) return;
+        int action = currentEditorInfo == null ? EditorInfo.IME_ACTION_NONE
+                : currentEditorInfo.imeOptions & EditorInfo.IME_MASK_ACTION;
+        if (action == EditorInfo.IME_ACTION_SEARCH) {
+            ic.performEditorAction(EditorInfo.IME_ACTION_SEARCH);
+            return;
+        }
+        if (action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED) {
+            if (ic.performEditorAction(action)) return;
+        }
+        ic.commitText("\n", 1);
     }
 
     void setEnglish(boolean value) {

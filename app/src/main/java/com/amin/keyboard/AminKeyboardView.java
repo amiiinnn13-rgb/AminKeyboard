@@ -43,8 +43,8 @@ public class AminKeyboardView extends LinearLayout {
         super(context);
         this.service = service;
         setOrientation(VERTICAL);
-        // Extra bottom inset raises the keys above the phone's navigation/gesture area.
-        setPadding(dp(4), dp(8), dp(4), dp(92)); // Raise the key rows by about 2.5 cm.
+        // Reduced bottom inset by about 1.5 cm to bring the keyboard closer to the screen edge.
+        setPadding(dp(4), dp(8), dp(4), dp(36));
         setBackgroundColor(Color.rgb(225, 229, 235));
         render();
     }

@@ -1,0 +1,9 @@
+# Local release signing credentials — never commit these files
+keystore.properties
+*.jks
+*.keystore
+
+# Android/Gradle build outputs
+.gradle/
+**/build/
+local.properties

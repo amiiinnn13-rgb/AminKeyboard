@@ -6,6 +6,9 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.view.Gravity;
+import android.view.MotionEvent;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
@@ -18,6 +21,15 @@ public class AminKeyboardView extends LinearLayout {
     private int page = 0;
     private int theme;
     private boolean numberRow;
+    private final Handler deleteHandler = new Handler(Looper.getMainLooper());
+    private boolean deletePressed = false;
+    private final Runnable repeatDelete = new Runnable() {
+        @Override public void run() {
+            if (!deletePressed) return;
+            service.backspace();
+            deleteHandler.postDelayed(this, 30);
+        }
+    };
 
     private final String[][] fa = {
             {"ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","چ"},
@@ -143,6 +155,12 @@ public class AminKeyboardView extends LinearLayout {
         addView(bottom, new LayoutParams(-1, rowHeight));
     }
 
+    @Override protected void onDetachedFromWindow() {
+        deletePressed = false;
+        deleteHandler.removeCallbacks(repeatDelete);
+        super.onDetachedFromWindow();
+    }
+
     private void addKey(LinearLayout row, String label, int weight, Runnable action, boolean accent) {
         Button b = new Button(getContext());
         b.setText(label);
@@ -156,6 +174,28 @@ public class AminKeyboardView extends LinearLayout {
         LayoutParams lp = new LayoutParams(0, -1, weight);
         lp.setMargins(dp(2), dp(2), dp(2), dp(2));
         row.addView(b, lp);
-        b.setOnClickListener(v -> action.run());
+        if ("⌫".equals(label)) {
+            // A tap deletes one character; holding the key repeats until the finger is lifted.
+            b.setOnTouchListener((v, event) -> {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        deletePressed = true;
+                        service.backspace();
+                        deleteHandler.removeCallbacks(repeatDelete);
+                        deleteHandler.postDelayed(repeatDelete, 320);
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        deletePressed = false;
+                        deleteHandler.removeCallbacks(repeatDelete);
+                        v.performClick();
+                        return true;
+                    default:
+                        return true;
+                }
+            });
+        } else {
+            b.setOnClickListener(v -> action.run());
+        }
     }
 }

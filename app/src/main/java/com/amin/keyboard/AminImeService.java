@@ -189,6 +189,36 @@ public class AminImeService extends InputMethodService {
         return cp >= 0x1F1E6 && cp <= 0x1F1FF;
     }
 
+    void typeSpaceWithShortcut() {
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null) return;
+        CharSequence before = ic.getTextBeforeCursor(128, 0);
+        if (before != null && before.length() > 0) {
+            String text = before.toString();
+            int start = text.length();
+            while (start > 0 && !Character.isWhitespace(text.charAt(start - 1))) start--;
+            String trigger = text.substring(start);
+            if (!trigger.isEmpty()) {
+                java.util.Set<String> shortcuts = getSharedPreferences("typo_settings", MODE_PRIVATE)
+                        .getStringSet("text_shortcuts", java.util.Collections.emptySet());
+                for (String entry : shortcuts) {
+                    int separator = entry.indexOf('\u001F');
+                    if (separator > 0 && entry.substring(0, separator).equals(trigger)) {
+                        String expansion = entry.substring(separator + 1);
+                        ic.deleteSurroundingText(trigger.length(), 0);
+                        ic.commitText(expansion + " ", 1);
+                        clearTypingCache();
+                        if (lastKnownSelectionStart >= 0) {
+                            lastKnownSelectionStart += expansion.length() + 1 - trigger.length();
+                        }
+                        return;
+                    }
+                }
+            }
+        }
+        typeTextRaw(" ");
+    }
+
     void setEnglish(boolean value) {
         english = value;
         clearTypingCache();

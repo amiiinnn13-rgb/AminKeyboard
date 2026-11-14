@@ -209,7 +209,7 @@ public class AminImeService extends InputMethodService {
                 java.util.Set<String> shortcuts = getSharedPreferences("typo_settings", MODE_PRIVATE)
                         .getStringSet("text_shortcuts", java.util.Collections.emptySet());
                 for (String entry : shortcuts) {
-                    int separator = entry.indexOf('\t');
+                    int separator = entry.indexOf('\\t');
                     if (separator > 0 && entry.substring(0, separator).equals(trigger)) {
                         String expansion = entry.substring(separator + 1);
                         ic.deleteSurroundingText(rawTrigger.length(), 0);
@@ -235,16 +235,14 @@ public class AminImeService extends InputMethodService {
     void pressEnter() {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null) return;
-        int action = currentEditorInfo == null ? EditorInfo.IME_ACTION_NONE
-                : currentEditorInfo.imeOptions & EditorInfo.IME_MASK_ACTION;
-        if (action == EditorInfo.IME_ACTION_SEARCH) {
+
+        // Preserve the dedicated Search action; ordinary Enter always inserts a newline.
+        if (isSearchAction()) {
             ic.performEditorAction(EditorInfo.IME_ACTION_SEARCH);
             return;
         }
-        if (action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED) {
-            if (ic.performEditorAction(action)) return;
-        }
-        ic.commitText("\n", 1);
+        ic.commitText("\\n", 1);
+        clearTypingCache();
     }
 
     void setEnglish(boolean value) {
@@ -260,12 +258,12 @@ public class AminImeService extends InputMethodService {
     }
 
     private boolean canJoinForward(char c) {
-        String dual = "بتثجحخسشصضطظعغفقکلمنهيپچژگک\u06cc";
+        String dual = "بتثجحخسشصضطظعغفقکلمنهيپچژگک\\u06cc";
         return dual.indexOf(c) >= 0;
     }
 
     private boolean canReceive(char c) {
-        String receive = "ابتثجحخدذرزسشصضطظعغفقکلمنوهىيپچژگک\u06cc";
+        String receive = "ابتثجحخدذرزسشصضطظعغفقکلمنوهىيپچژگک\\u06cc";
         return receive.indexOf(c) >= 0;
     }
 }

@@ -117,12 +117,12 @@ public class AminImeService extends InputMethodService {
     }
 
     private boolean canJoinForward(char c) {
-        String dual = "بتثجحخسشصضطظعغفقكلمنهيپچژگک";
+        String dual = "بتثجحخسشصضطظعغفقکلمنهيپچژگک\u06cc";
         return dual.indexOf(c) >= 0;
     }
 
     private boolean canReceive(char c) {
-        String receive = "ابتثجحخدذرزسشصضطظعغفقکلمنوهىيپچژگک";
+        String receive = "ابتثجحخدذرزسشصضطظعغفقکلمنوهىيپچژگک\u06cc";
         return receive.indexOf(c) >= 0;
     }
 }

@@ -34,7 +34,7 @@ public class AminKeyboardView extends LinearLayout {
         @Override public void run() {
             if (!deletePressed) return;
             service.backspace();
-            deleteHandler.postDelayed(this, 45);
+            deleteHandler.postDelayed(this, 35);
         }
     };
 
@@ -95,7 +95,7 @@ public class AminKeyboardView extends LinearLayout {
         removeAllViews();
         setBackgroundColor(backgrounds[theme]);
         int rows = page == 2 ? (emojiCategory == 1 ? 7 : 6) : ((page == 0 && !numberRow) ? 5 : 6);
-        int rowHeight = dp((keyboardHeightDp() - 80) / (float) rows);
+        int rowHeight = dp(((keyboardHeightDp() - 80) / (float) rows) * keyScale);
         addToolbar();
 
         if (page == 2 || page == 1) {

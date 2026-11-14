@@ -156,7 +156,7 @@ public class AminKeyboardView extends LinearLayout {
         }, true);
         addDiacriticsKey(bottom);
         addKey(bottom, "فاصله", 40, () -> service.typeTextRaw(" "), false);
-        addKey(bottom, "↵", 10, () -> service.typeTextRaw("\\n"), true);
+        addKey(bottom, "↵", 10, () -> service.typeTextRaw("\n"), true);
         addView(bottom, new LayoutParams(-1, rowHeight));
     }
 

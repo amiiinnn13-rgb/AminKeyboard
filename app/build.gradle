@@ -17,3 +17,17 @@ android {
         targetCompatibility JavaVersion.VERSION_11
     }
 }
+
+// Decode the checked-in Typo launcher artwork before Android resources are processed.
+tasks.register('decodeLauncherIcon') {
+    doLast {
+        def encodedIcon = file('src/main/assets/typo_icon.jpg.b64').getText('UTF-8').trim()
+        def iconFile = file('src/main/res/mipmap-xhdpi/ic_launcher.jpg')
+        iconFile.parentFile.mkdirs()
+        iconFile.bytes = encodedIcon.decodeBase64()
+    }
+}
+
+tasks.named('preBuild').configure {
+    dependsOn 'decodeLauncherIcon'
+}

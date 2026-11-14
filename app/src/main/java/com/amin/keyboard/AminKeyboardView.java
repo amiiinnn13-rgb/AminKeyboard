@@ -420,7 +420,7 @@ public class AminKeyboardView extends LinearLayout {
     private int keyGapDp() {
         float widthDp = getResources().getDisplayMetrics().widthPixels
                 / getResources().getDisplayMetrics().density;
-        return widthDp < 430f ? 1 : 2;
+        return widthDp < 380f ? 2 : 3;
     }
 
     void onEditorInfoChanged() {

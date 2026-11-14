@@ -10,6 +10,11 @@ import android.view.MotionEvent;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.Button;
+import android.widget.HorizontalScrollView;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.app.AlertDialog;
+import android.widget.Toast;
 import android.widget.LinearLayout;
 
 public class AminKeyboardView extends LinearLayout {
@@ -27,7 +32,7 @@ public class AminKeyboardView extends LinearLayout {
         @Override public void run() {
             if (!deletePressed) return;
             service.backspace();
-            deleteHandler.postDelayed(this, 30);
+            deleteHandler.postDelayed(this, 45);
         }
     };
 
@@ -79,15 +84,16 @@ public class AminKeyboardView extends LinearLayout {
 
     private int keyboardHeightDp() {
         float h = getResources().getDisplayMetrics().heightPixels / getResources().getDisplayMetrics().density;
-        return Math.round(Math.max(260f, Math.min(290f, h * 0.34f)));
+        return Math.round(Math.max(300f, Math.min(330f, h * 0.39f)));
     }
 
     private void render() {
         reloadPrefs();
         removeAllViews();
         setBackgroundColor(backgrounds[theme]);
-        int rows = (page == 0 && !numberRow) ? 4 : 5;
-        int rowHeight = dp((keyboardHeightDp() - 40) / (float) rows);
+        int rows = (page == 0 && !numberRow) ? 5 : 6;
+        int rowHeight = dp((keyboardHeightDp() - 80) / (float) rows);
+        addToolbar();
 
         if (page == 2 || page == 1) {
             String[][] data = page == 2 ? emojis : symbols;
@@ -155,6 +161,135 @@ public class AminKeyboardView extends LinearLayout {
         addView(bottom, new LayoutParams(-1, rowHeight));
     }
 
+    private void addToolbar() {
+        HorizontalScrollView scroller = new HorizontalScrollView(getContext());
+        scroller.setHorizontalScrollBarEnabled(false);
+        LinearLayout tools = new LinearLayout(getContext());
+        tools.setOrientation(HORIZONTAL);
+        tools.setGravity(Gravity.CENTER_VERTICAL);
+        tools.setPadding(dp(2), 0, dp(2), 0);
+
+        addToolButton(tools, "📋", this::showClipboardHistory);
+        addToolButton(tools, "چسباندن", () -> pasteClipboard());
+        addToolButton(tools, "انتخاب همه", () -> performEditorAction(android.R.id.selectAll));
+        addToolButton(tools, "برش", () -> performEditorAction(android.R.id.cut));
+        addToolButton(tools, "کپی", () -> performEditorAction(android.R.id.copy));
+        addToolButton(tools, "↔", () -> {
+            english = !english;
+            service.setEnglish(english);
+            shifted = false;
+            page = 0;
+            render();
+        });
+        scroller.addView(tools, new HorizontalScrollView.LayoutParams(-2, -1));
+        addView(scroller, new LayoutParams(-1, dp(40)));
+    }
+
+    private void addToolButton(LinearLayout parent, String label, Runnable action) {
+        Button button = new Button(getContext());
+        button.setText(label);
+        button.setAllCaps(false);
+        button.setTextSize(label.length() > 3 ? 11 : 16);
+        button.setMinWidth(0);
+        button.setMinimumWidth(0);
+        button.setPadding(dp(8), 0, dp(8), 0);
+        button.setBackgroundTintList(ColorStateList.valueOf(Color.WHITE));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(34));
+        lp.setMargins(dp(2), 0, dp(2), 0);
+        parent.addView(button, lp);
+        button.setOnClickListener(v -> action.run());
+    }
+
+    private void performEditorAction(int actionId) {
+        android.view.inputmethod.InputConnection ic = service.getCurrentInputConnection();
+        if (ic != null) ic.performContextMenuAction(actionId);
+    }
+
+    private void pasteClipboard() {
+        ClipboardManager clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard != null && clipboard.hasPrimaryClip() && clipboard.getPrimaryClip().getItemCount() > 0) {
+            CharSequence text = clipboard.getPrimaryClip().getItemAt(0).coerceToText(getContext());
+            if (text != null) service.typeTextRaw(text.toString());
+        }
+    }
+
+    private void showClipboardHistory() {
+        ClipboardManager clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+        java.util.LinkedHashSet<String> history = new java.util.LinkedHashSet<>(
+                prefs.getStringSet("clipboard_history", new java.util.LinkedHashSet<>()));
+        if (clipboard != null && clipboard.hasPrimaryClip() && clipboard.getPrimaryClip().getItemCount() > 0) {
+            CharSequence current = clipboard.getPrimaryClip().getItemAt(0).coerceToText(getContext());
+            if (current != null && current.length() > 0) {
+                history.add(current.toString());
+                while (history.size() > 20) history.remove(history.iterator().next());
+                prefs.edit().putStringSet("clipboard_history", new java.util.HashSet<>(history)).apply();
+            }
+        }
+        if (history.isEmpty()) {
+            Toast.makeText(getContext(), "هنوز متنی در حافظهٔ کلیپ‌بورد ذخیره نشده است.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String[] entries = history.toArray(new String[0]);
+        // Most recently added item appears first.
+        for (int i = 0, j = entries.length - 1; i < j; i++, j--) {
+            String temp = entries[i]; entries[i] = entries[j]; entries[j] = temp;
+        }
+        new AlertDialog.Builder(getContext())
+                .setTitle("حافظهٔ کلیپ‌بورد")
+                .setItems(entries, (dialog, which) -> service.typeTextRaw(entries[which]))
+                .setNegativeButton("بستن", null)
+                .show();
+    }
+
+    private void addDiacriticsKey(LinearLayout row) {
+        Button dot = new Button(getContext());
+        dot.setText(".");
+        dot.setAllCaps(false);
+        dot.setTextSize(21);
+        dot.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        dot.setPadding(0, 0, 0, 0);
+        dot.setMinWidth(0);
+        dot.setMinimumWidth(0);
+        dot.setBackgroundTintList(ColorStateList.valueOf(keys[theme]));
+        LayoutParams lp = new LayoutParams(0, -1, 8);
+        lp.setMargins(dp(2), dp(2), dp(2), dp(2));
+        row.addView(dot, lp);
+
+        final boolean[] opened = {false};
+        final Runnable showPanel = () -> {
+            if (!dot.isPressed()) return;
+            opened[0] = true;
+            showDiacriticsPanel();
+        };
+        dot.setOnTouchListener((v, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    opened[0] = false;
+                    deleteHandler.removeCallbacks(showPanel);
+                    deleteHandler.postDelayed(showPanel, 2000);
+                    return true;
+                case MotionEvent.ACTION_UP:
+                    deleteHandler.removeCallbacks(showPanel);
+                    if (!opened[0]) service.typeTextRaw(".");
+                    return true;
+                case MotionEvent.ACTION_CANCEL:
+                    deleteHandler.removeCallbacks(showPanel);
+                    return true;
+                default:
+                    return true;
+            }
+        });
+    }
+
+    private void showDiacriticsPanel() {
+        String[] marks = {"َ","ِ","ُ","ّ","ْ","ً","ٍ","ٌ","ٰ","ٖ","ٗ","ٓ","ـ"};
+        new AlertDialog.Builder(getContext())
+                .setTitle("اعراب و نشانه‌ها")
+                .setItems(marks, (dialog, which) -> service.typeTextRaw(marks[which]))
+                .setNegativeButton("بستن", null)
+                .show();
+    }
+
     @Override protected void onDetachedFromWindow() {
         deletePressed = false;
         deleteHandler.removeCallbacks(repeatDelete);
@@ -165,7 +300,7 @@ public class AminKeyboardView extends LinearLayout {
         Button b = new Button(getContext());
         b.setText(label);
         b.setAllCaps(false);
-        b.setTextSize(label.length() > 2 ? 12 : 18);
+        b.setTextSize(label.length() > 2 ? 13 : 21);
         b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         b.setPadding(0, 0, 0, 0);
         b.setMinWidth(0);

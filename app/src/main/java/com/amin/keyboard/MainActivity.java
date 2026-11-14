@@ -16,7 +16,7 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(32, 48, 32, 32);
         TextView title = new TextView(this);
-        title.setText("Amin Keyboard\n\nکیبورد فارسی با کشیده‌گذاری خودکار چهارگانه");
+        title.setText("تــــایــــپــــو\n\nکیبورد فارسی با کشیده‌گذاری خودکار چهارگانه");
         title.setTextSize(21);
         root.addView(title);
         Button settings = new Button(this);
@@ -24,7 +24,7 @@ public class MainActivity extends Activity {
         settings.setOnClickListener(v -> startActivity(new Intent("android.settings.INPUT_METHOD_SETTINGS")));
         root.addView(settings);
         Button choose = new Button(this);
-        choose.setText("انتخاب کیبورد Amin");
+        choose.setText("انتخاب کیبورد تــــایــــپــــو");
         choose.setOnClickListener(v -> ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE)).showInputMethodPicker());
         root.addView(choose);
         setContentView(root);

@@ -53,6 +53,11 @@ public class MainActivity extends Activity {
             prefs.edit().putInt("one_hand", next).apply();
             refreshStatus();
         });
+        addButton(root, "ارتفاع کیبورد: کوتاه / معمولی / بلند", v -> {
+            int next = (prefs.getInt("keyboard_height", 1) + 1) % 3;
+            prefs.edit().putInt("keyboard_height", next).apply();
+            refreshStatus();
+        });
         addButton(root, "اندازه نوشته کلیدها", v -> {
             float current = prefs.getFloat("key_scale", 1.3f);
             float next = current >= 1.29f ? 1.0f : (current >= 1.14f ? 1.3f : 1.15f);
@@ -149,6 +154,8 @@ public class MainActivity extends Activity {
         String[] modes = {"تمام‌عرض", "یک‌دستی چپ", "یک‌دستی راست"};
         int mode = Math.max(0, Math.min(2, prefs.getInt("one_hand", 0)));
         float scale = prefs.getFloat("key_scale", 1.3f);
+        String[] heights = {"کوتاه", "معمولی", "بلند"};
+        int height = Math.max(0, Math.min(2, prefs.getInt("keyboard_height", 1)));
         int shortcuts = prefs.getStringSet("text_shortcuts", new HashSet<>()).size();
         status.setText("تم: " + themes[theme] +
                 "\nردیف اعداد: " + (prefs.getBoolean("number_row", true) ? "روشن" : "خاموش") +

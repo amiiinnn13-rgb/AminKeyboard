@@ -197,7 +197,8 @@ public class AminImeService extends InputMethodService {
             String text = before.toString();
             int start = text.length();
             while (start > 0 && !Character.isWhitespace(text.charAt(start - 1))) start--;
-            String trigger = text.substring(start);
+            String rawTrigger = text.substring(start);
+            String trigger = rawTrigger.replace("\\u0640", "");
             if (!trigger.isEmpty()) {
                 java.util.Set<String> shortcuts = getSharedPreferences("typo_settings", MODE_PRIVATE)
                         .getStringSet("text_shortcuts", java.util.Collections.emptySet());
@@ -205,11 +206,11 @@ public class AminImeService extends InputMethodService {
                     int separator = entry.indexOf('\t');
                     if (separator > 0 && entry.substring(0, separator).equals(trigger)) {
                         String expansion = entry.substring(separator + 1);
-                        ic.deleteSurroundingText(trigger.length(), 0);
+                        ic.deleteSurroundingText(rawTrigger.length(), 0);
                         ic.commitText(expansion + " ", 1);
                         clearTypingCache();
                         if (lastKnownSelectionStart >= 0) {
-                            lastKnownSelectionStart += expansion.length() + 1 - trigger.length();
+                            lastKnownSelectionStart += expansion.length() + 1 - rawTrigger.length();
                         }
                         return;
                     }

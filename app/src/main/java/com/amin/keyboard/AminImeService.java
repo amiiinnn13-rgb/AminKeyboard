@@ -36,25 +36,16 @@ public class AminImeService extends InputMethodService {
                                   int candidatesStart, int candidatesEnd) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
                 candidatesStart, candidatesEnd);
-
-        if (newSelStart != newSelEnd) {
+        if (newSelStart != newSelEnd || newSelStart == 0) {
             clearTypingCache();
             lastKnownSelectionStart = newSelStart;
             return;
         }
-
-        if (newSelStart == 0) {
-            clearTypingCache();
-            lastKnownSelectionStart = 0;
-            return;
-        }
-
         InputConnection ic = getCurrentInputConnection();
         CharSequence before = ic == null ? null : ic.getTextBeforeCursor(1, 0);
         if (before != null && before.length() > 0) {
             rememberChar(before.charAt(before.length() - 1));
         } else if (lastKnownSelectionStart >= 0 && newSelStart != lastKnownSelectionStart) {
-            // The cursor moved but the editor did not expose its surrounding text.
             clearTypingCache();
         }
         lastKnownSelectionStart = newSelStart;
@@ -63,13 +54,11 @@ public class AminImeService extends InputMethodService {
     void typeText(String text) {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null || TextUtils.isEmpty(text)) return;
-
-        if (!english && text.length() == 1) {
+        if (!english && text.length() == 1 && canReceive(text.charAt(0))) {
             char current = text.charAt(0);
             CharSequence before = ic.getTextBeforeCursor(1, 0);
             char previous = 0;
             boolean hasPrevious = false;
-
             if (before != null && before.length() > 0) {
                 previous = before.charAt(before.length() - 1);
                 hasPrevious = true;
@@ -77,53 +66,42 @@ public class AminImeService extends InputMethodService {
                 previous = lastTypedChar;
                 hasPrevious = true;
             }
-
-            String committed = hasPrevious
-                    && canJoinForward(previous) && canReceive(current)
+            String committed = hasPrevious && canJoinForward(previous)
                     ? TATWEEL + text : text;
-
             ic.commitText(committed, 1);
             rememberChar(current);
-            if (lastKnownSelectionStart >= 0) {
-                lastKnownSelectionStart += committed.length();
-            }
+            if (lastKnownSelectionStart >= 0) lastKnownSelectionStart += committed.length();
         } else {
-            ic.commitText(text, 1);
-            if (text.length() == 1) rememberChar(text.charAt(0));
-            else clearTypingCache();
-            if (lastKnownSelectionStart >= 0) {
-                lastKnownSelectionStart += text.length();
-            }
+            typeTextRaw(text);
         }
+    }
+
+    // Used for punctuation, spaces, emoji and diacritics so they never trigger auto-tatweel.
+    void typeTextRaw(String text) {
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null || TextUtils.isEmpty(text)) return;
+        ic.commitText(text, 1);
+        if (text.length() == 1 && isPersianLetter(text.charAt(0))) rememberChar(text.charAt(0));
+        else clearTypingCache();
+        if (lastKnownSelectionStart >= 0) lastKnownSelectionStart += text.length();
     }
 
     void backspace() {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null) return;
-
         CharSequence before = ic.getTextBeforeCursor(32, 0);
         if (before == null || before.length() == 0) {
             if (lastKnownSelectionStart == 0) clearTypingCache();
             return;
         }
-
         int remove = 1;
         int i = before.length() - 2;
-        while (i >= 0 && before.charAt(i) == '\u0640') {
-            remove++;
-            i--;
-        }
+        while (i >= 0 && before.charAt(i) == '\u0640') { remove++; i--; }
         ic.deleteSurroundingText(remove, 0);
-
         CharSequence remaining = ic.getTextBeforeCursor(1, 0);
-        if (remaining != null && remaining.length() > 0) {
-            rememberChar(remaining.charAt(remaining.length() - 1));
-        } else if (lastKnownSelectionStart <= remove) {
-            clearTypingCache();
-        }
-        if (lastKnownSelectionStart >= 0) {
-            lastKnownSelectionStart = Math.max(0, lastKnownSelectionStart - remove);
-        }
+        if (remaining != null && remaining.length() > 0) rememberChar(remaining.charAt(remaining.length() - 1));
+        else if (lastKnownSelectionStart <= remove) clearTypingCache();
+        if (lastKnownSelectionStart >= 0) lastKnownSelectionStart = Math.max(0, lastKnownSelectionStart - remove);
     }
 
     void setEnglish(boolean value) {
@@ -131,14 +109,11 @@ public class AminImeService extends InputMethodService {
         clearTypingCache();
     }
 
-    private void rememberChar(char c) {
-        lastTypedChar = c;
-        hasLastTypedChar = true;
-    }
+    private void rememberChar(char c) { lastTypedChar = c; hasLastTypedChar = true; }
+    private void clearTypingCache() { lastTypedChar = 0; hasLastTypedChar = false; }
 
-    private void clearTypingCache() {
-        lastTypedChar = 0;
-        hasLastTypedChar = false;
+    private boolean isPersianLetter(char c) {
+        return canJoinForward(c) || canReceive(c);
     }
 
     private boolean canJoinForward(char c) {

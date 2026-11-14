@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -12,6 +11,9 @@ import android.widget.LinearLayout;
 public class AminKeyboardView extends LinearLayout {
     private final AminImeService service;
     private boolean english = false;
+    private boolean shifted = false;
+    private boolean capsLock = false;
+    private int page = 0; // 0 letters, 1 symbols, 2 emoji
 
     private final String[][] fa = {
             {"ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","چ"},
@@ -23,12 +25,26 @@ public class AminKeyboardView extends LinearLayout {
             {"a","s","d","f","g","h","j","k","l"},
             {"z","x","c","v","b","n","m"}
     };
+    private final String[][] symbols = {
+            {"۱","۲","۳","۴","۵","۶","۷","۸","۹","۰"},
+            {"1","2","3","4","5","6","7","8","9","0"},
+            {"@","#","$","%","&","-","+","(",")","/"},
+            {"*","\"","'",";",":","!","؟","،",".","="}
+    };
+    private final String[][] emojis = {
+            {"😀","😃","😄","😁","😆","😅","😂","🤣"},
+            {"😊","😍","🥰","😘","😎","🤔","😭","😡"},
+            {"👍","👎","👏","🙏","❤️","💕","🔥","✨"},
+            {"🌹","🌷","🌸","🌺","🌻","🌈","⭐","🎉"}
+    };
+    private final String[] diacritics = {"َ","ِ","ُ","ّ","ْ","ً","ٍ","ٌ","ٰ","ـ"};
 
     public AminKeyboardView(Context context, AminImeService service) {
         super(context);
         this.service = service;
         setOrientation(VERTICAL);
-        setPadding(dp(4), dp(8), dp(4), dp(8));
+        // Extra bottom inset raises the key surfaces above the phone's gesture/navigation area.
+        setPadding(dp(4), dp(8), dp(4), dp(28));
         setBackgroundColor(Color.rgb(225, 229, 235));
         render();
     }
@@ -38,44 +54,113 @@ public class AminKeyboardView extends LinearLayout {
     }
 
     private int keyboardHeightDp() {
-        DisplayMetrics metrics = getResources().getDisplayMetrics();
-        float screenHeightDp = metrics.heightPixels / metrics.density;
+        float screenHeightDp = getResources().getDisplayMetrics().heightPixels
+                / getResources().getDisplayMetrics().density;
         return Math.round(Math.max(260f, Math.min(290f, screenHeightDp * 0.34f)));
     }
 
     private void render() {
         removeAllViews();
-        String[][] rows = english ? en : fa;
+        int rowHeight = dp((keyboardHeightDp() - 36) / 4f);
 
-        int rowHeight = dp((keyboardHeightDp() - 16) / 4f);
-        for (String[] row : rows) {
-            LinearLayout line = new LinearLayout(getContext());
-            line.setGravity(Gravity.CENTER);
-            line.setOrientation(HORIZONTAL);
-            for (String key : row) addKey(line, key, 1);
-            addView(line, new LayoutParams(-1, rowHeight));
+        if (page == 2) {
+            for (String[] row : emojis) {
+                LinearLayout line = newRow();
+                for (String emoji : row) addKey(line, emoji, 1, () -> service.typeTextRaw(emoji));
+                addView(line, new LayoutParams(-1, rowHeight));
+            }
+            addBottomRow(rowHeight, true);
+            return;
         }
 
-        LinearLayout bottom = new LinearLayout(getContext());
-        bottom.setGravity(Gravity.CENTER);
-        addKey(bottom, "?123", 1, () -> {});
-        addKey(bottom, english ? "فا" : "EN", 1, () -> {
-            english = !english;
-            service.setEnglish(english);
-            render();
-        });
-        addKey(bottom, "،", 1, () -> service.typeText("،"));
-        addKey(bottom, "فاصله", 4, () -> service.typeText(" "));
-        addKey(bottom, "⌫", 1, () -> service.backspace());
-        addKey(bottom, "↵", 1, () -> service.typeText("\n"));
-        addView(bottom, new LayoutParams(-1, rowHeight));
+        if (page == 1) {
+            for (String[] row : symbols) {
+                LinearLayout line = newRow();
+                for (String key : row) addKey(line, key, 1, () -> service.typeTextRaw(key));
+                addView(line, new LayoutParams(-1, rowHeight));
+            }
+            addBottomRow(rowHeight, false);
+            return;
+        }
+
+        String[][] rows = english ? en : fa;
+        for (int i = 0; i < rows.length; i++) {
+            LinearLayout line = newRow();
+            if (i == 2) {
+                addKey(line, "⇧", 13, () -> {
+                    shifted = !shifted;
+                    if (!shifted) capsLock = false;
+                    render();
+                }, () -> {
+                    capsLock = !capsLock;
+                    shifted = capsLock;
+                    render();
+                });
+            }
+            for (String original : rows[i]) {
+                String key = english && shifted ? original.toUpperCase() : original;
+                addKey(line, key, 10, () -> {
+                    service.typeText(key);
+                    if (english && shifted && !capsLock) {
+                        shifted = false;
+                        render();
+                    }
+                });
+            }
+            if (i == 2) addKey(line, "⌫", 13, () -> service.backspace());
+            addView(line, new LayoutParams(-1, rowHeight));
+        }
+        addBottomRow(rowHeight, false);
     }
 
-    private void addKey(LinearLayout row, String label, int weight) {
-        addKey(row, label, weight, () -> service.typeText(label));
+    private LinearLayout newRow() {
+        LinearLayout line = new LinearLayout(getContext());
+        line.setGravity(Gravity.CENTER);
+        line.setOrientation(HORIZONTAL);
+        return line;
+    }
+
+    private void addBottomRow(int rowHeight, boolean emojiPage) {
+        LinearLayout bottom = newRow();
+        addKey(bottom, page == 1 ? "ABC" : "?123", 12, () -> {
+            page = page == 1 ? 0 : 1;
+            shifted = false;
+            render();
+        });
+        addKey(bottom, "☺", 10, () -> {
+            page = page == 2 ? 0 : 2;
+            render();
+        });
+        addKey(bottom, english ? "فا" : "EN", 10, () -> {
+            english = !english;
+            service.setEnglish(english);
+            shifted = false;
+            capsLock = false;
+            page = 0;
+            render();
+        });
+        addKey(bottom, "،", 8, () -> service.typeTextRaw("،"));
+        addKey(bottom, "فاصله", 36, () -> service.typeTextRaw(" "));
+        addKey(bottom, "⌫", 10, () -> service.backspace());
+        addKey(bottom, "↵", 10, () -> service.typeTextRaw("\n"));
+        addView(bottom, new LayoutParams(-1, rowHeight));
+
+        if (!english && page == 0) {
+            LinearLayout marks = newRow();
+            for (String mark : diacritics) {
+                addKey(marks, mark, 1, () -> service.typeTextRaw(mark));
+            }
+            // Keep diacritics accessible on the Persian shifted layer without taking another row.
+            // They are also shown in a compact strip when Persian is active.
+            addView(marks, 0, new LayoutParams(-1, dp(0)));
+        }
     }
 
     private void addKey(LinearLayout row, String label, int weight, Runnable action) {
+        addKey(row, label, weight, action, null);
+    }
+
+    private void addKey(LinearLayout row, String label, int weight, Runnable action, Runnable longAction) {
         Button b = new Button(getContext());
         b.setText(label);
         b.setAllCaps(false);
@@ -85,10 +170,10 @@ public class AminKeyboardView extends LinearLayout {
         b.setMinWidth(0);
         b.setMinimumWidth(0);
         b.setBackgroundTintList(ColorStateList.valueOf(Color.WHITE));
-
         LayoutParams lp = new LayoutParams(0, -1, weight);
         lp.setMargins(dp(2), dp(2), dp(2), dp(2));
         row.addView(b, lp);
         b.setOnClickListener(v -> action.run());
+        if (longAction != null) b.setOnLongClickListener(v -> { longAction.run(); return true; });
     }
 }

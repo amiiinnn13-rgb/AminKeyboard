@@ -112,7 +112,6 @@ public class AminImeService extends InputMethodService {
         int start = previousCodePointStart(before, end);
         int cp = Character.codePointAt(before, start);
         while (start > 0 && (isCombiningMark(cp) || isVariationSelector(cp) || isEmojiModifier(cp))) {
-            end = start;
             start = previousCodePointStart(before, start);
             cp = Character.codePointAt(before, start);
         }

@@ -15,7 +15,16 @@ public class AminImeService extends InputMethodService {
 
     @Override
     public View onCreateInputView() {
-        return new AminKeyboardView(this, this);
+        FrameLayout container = new FrameLayout(this);
+        AminKeyboardView keyboard = new AminKeyboardView(this, this);
+        int mode = getSharedPreferences("typo_settings", MODE_PRIVATE).getInt("one_hand", 0);
+        int width = mode == 0 ? FrameLayout.LayoutParams.MATCH_PARENT
+                : Math.round(getResources().getDisplayMetrics().widthPixels * 0.78f);
+        int gravity = mode == 1 ? Gravity.BOTTOM | Gravity.LEFT
+                : (mode == 2 ? Gravity.BOTTOM | Gravity.RIGHT : Gravity.BOTTOM);
+        container.addView(keyboard, new FrameLayout.LayoutParams(
+                width, FrameLayout.LayoutParams.WRAP_CONTENT, gravity));
+        return container;
     }
 
     @Override

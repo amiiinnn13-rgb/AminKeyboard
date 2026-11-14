@@ -307,31 +307,47 @@ public class AminKeyboardView extends LinearLayout {
 
     private void showClipboardHistory() {
         ClipboardManager clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-        java.util.LinkedHashSet<String> history = new java.util.LinkedHashSet<>(
-                prefs.getStringSet("clipboard_history", new java.util.LinkedHashSet<>()));
+        java.util.ArrayList<String> history = new java.util.ArrayList<>();
+        String stored = prefs.getString("clipboard_history_ordered", "");
+        if (!stored.isEmpty()) {
+            for (String encoded : stored.split(";")) {
+                try {
+                    String item = new String(android.util.Base64.decode(encoded, android.util.Base64.NO_WRAP),
+                            java.nio.charset.StandardCharsets.UTF_8);
+                    if (!item.isEmpty() && !history.contains(item)) history.add(item);
+                } catch (IllegalArgumentException ignored) { }
+            }
+        }
         if (clipboard != null && clipboard.hasPrimaryClip() && clipboard.getPrimaryClip().getItemCount() > 0) {
             CharSequence current = clipboard.getPrimaryClip().getItemAt(0).coerceToText(getContext());
             if (current != null && current.length() > 0) {
-                history.add(current.toString());
-                while (history.size() > 20) history.remove(history.iterator().next());
-                prefs.edit().putStringSet("clipboard_history", new java.util.HashSet<>(history)).apply();
+                history.remove(current.toString());
+                history.add(0, current.toString());
             }
         }
+        while (history.size() > 20) history.remove(history.size() - 1);
+        java.util.ArrayList<String> encodedHistory = new java.util.ArrayList<>();
+        for (String item : history) {
+            encodedHistory.add(android.util.Base64.encodeToString(
+                    item.getBytes(java.nio.charset.StandardCharsets.UTF_8), android.util.Base64.NO_WRAP));
+        }
+        prefs.edit().putString("clipboard_history_ordered",
+                android.text.TextUtils.join(";", encodedHistory)).apply();
+
         if (history.isEmpty()) {
             Toast.makeText(getContext(), "هنوز متنی در حافظهٔ کلیپ‌بورد ذخیره نشده است.", Toast.LENGTH_SHORT).show();
             return;
         }
         String[] entries = history.toArray(new String[0]);
-        // Most recently added item appears first.
-        for (int i = 0, j = entries.length - 1; i < j; i++, j--) {
-            String temp = entries[i]; entries[i] = entries[j]; entries[j] = temp;
-        }
         new AlertDialog.Builder(getContext())
                 .setTitle("حافظهٔ کلیپ‌بورد")
                 .setItems(entries, (dialog, which) -> service.typeTextRaw(entries[which]))
+                .setNeutralButton("پاک‌کردن همه", (dialog, which) ->
+                        prefs.edit().remove("clipboard_history_ordered").apply())
                 .setNegativeButton("بستن", null)
                 .show();
     }
+
 
     private void addDiacriticsKey(LinearLayout row) {
         Button dot = new Button(getContext());

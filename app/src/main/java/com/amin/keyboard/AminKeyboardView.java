@@ -26,6 +26,7 @@ public class AminKeyboardView extends LinearLayout {
     private int page = 0;
     private int theme;
     private boolean numberRow;
+    private float keyScale = 1.3f;
     private final Handler deleteHandler = new Handler(Looper.getMainLooper());
     private boolean deletePressed = false;
     private final Runnable repeatDelete = new Runnable() {
@@ -76,6 +77,7 @@ public class AminKeyboardView extends LinearLayout {
     private void reloadPrefs() {
         theme = Math.max(0, Math.min(2, prefs.getInt("theme", 0)));
         numberRow = prefs.getBoolean("number_row", true);
+        keyScale = Math.max(1.0f, Math.min(1.3f, prefs.getFloat("key_scale", 1.3f)));
     }
 
     private int dp(float value) {
@@ -155,7 +157,7 @@ public class AminKeyboardView extends LinearLayout {
             english = !english; service.setEnglish(english); shifted = false; capsLock = false; page = 0; render();
         }, true);
         addDiacriticsKey(bottom);
-        addKey(bottom, "فاصله", 40, () -> service.typeTextRaw(" "), false);
+        addKey(bottom, "فاصله", 40, service::typeSpaceWithShortcut, false);
         addKey(bottom, "↵", 10, () -> service.typeTextRaw("\n"), true);
         addView(bottom, new LayoutParams(-1, rowHeight));
     }
@@ -245,7 +247,7 @@ public class AminKeyboardView extends LinearLayout {
         Button dot = new Button(getContext());
         dot.setText(".");
         dot.setAllCaps(false);
-        dot.setTextSize(21);
+        dot.setTextSize(16 * keyScale);
         dot.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         dot.setPadding(0, 0, 0, 0);
         dot.setMinWidth(0);
@@ -304,7 +306,7 @@ public class AminKeyboardView extends LinearLayout {
         Button b = new Button(getContext());
         b.setText(label);
         b.setAllCaps(false);
-        b.setTextSize(label.length() > 2 ? 15 : 23);
+        b.setTextSize((label.length() > 2 ? 12 : 18) * keyScale);
         b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         b.setPadding(0, 0, 0, 0);
         b.setMinWidth(0);

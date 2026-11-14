@@ -99,7 +99,7 @@ public class AminKeyboardView extends LinearLayout {
         removeAllViews();
         setBackgroundColor(backgrounds[theme]);
         int rows = page == 2 ? (emojiCategory == 1 ? 7 : 6) : ((page == 0 && !numberRow) ? 5 : 6);
-        int rowHeight = dp(((keyboardHeightDp() - 80) / (float) rows) * keyScale);
+        int rowHeight = dp((keyboardHeightDp() - 80) / (float) rows);
         addToolbar();
 
         if (page == 2 || page == 1) {
@@ -173,7 +173,7 @@ public class AminKeyboardView extends LinearLayout {
         }, true);
         addDiacriticsKey(bottom);
         addKey(bottom, "فاصله", 40, service::typeSpaceWithShortcut, false);
-        addKey(bottom, "↵", 10, () -> service.typeTextRaw("\n"), true);
+        addKey(bottom, service.isSearchAction() ? "🔍" : "↵", 10, service::pressEnter, true);
         addView(bottom, new LayoutParams(-1, rowHeight));
     }
 
@@ -353,14 +353,15 @@ public class AminKeyboardView extends LinearLayout {
         Button dot = new Button(getContext());
         dot.setText(".");
         dot.setAllCaps(false);
-        dot.setTextSize(16 * keyScale);
+        dot.setTextSize(keyTextSize("."));
         dot.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         dot.setPadding(0, 0, 0, 0);
         dot.setMinWidth(0);
         dot.setMinimumWidth(0);
         dot.setBackgroundTintList(ColorStateList.valueOf(keys[theme]));
         LayoutParams lp = new LayoutParams(0, -1, 8);
-        lp.setMargins(dp(2), dp(2), dp(2), dp(2));
+        int gap = dp(keyGapDp());
+        lp.setMargins(gap, dp(2), gap, dp(2));
         row.addView(dot, lp);
 
         final boolean[] opened = {false};
@@ -408,18 +409,40 @@ public class AminKeyboardView extends LinearLayout {
         super.onDetachedFromWindow();
     }
 
+    private float keyTextSize(String label) {
+        float widthDp = getResources().getDisplayMetrics().widthPixels
+                / getResources().getDisplayMetrics().density;
+        float perKeyWidth = widthDp / 12f;
+        if (label.length() > 2) return Math.min(12f * keyScale, Math.max(10f, perKeyWidth * 0.50f));
+        return Math.min(18f * keyScale, Math.max(14f, perKeyWidth * 0.62f));
+    }
+
+    private int keyGapDp() {
+        float widthDp = getResources().getDisplayMetrics().widthPixels
+                / getResources().getDisplayMetrics().density;
+        return widthDp < 430f ? 1 : 2;
+    }
+
+    void onEditorInfoChanged() {
+        render();
+    }
+
     private void addKey(LinearLayout row, String label, int weight, Runnable action, boolean accent) {
         Button b = new Button(getContext());
         b.setText(label);
         b.setAllCaps(false);
-        b.setTextSize((label.length() > 2 ? 12 : 18) * keyScale);
+        b.setTextSize(keyTextSize(label));
+        b.setIncludeFontPadding(false);
+        b.setSingleLine(true);
+        b.setMaxLines(1);
         b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         b.setPadding(0, 0, 0, 0);
         b.setMinWidth(0);
         b.setMinimumWidth(0);
         b.setBackgroundTintList(ColorStateList.valueOf(accent ? accents[theme] : keys[theme]));
         LayoutParams lp = new LayoutParams(0, -1, weight);
-        lp.setMargins(dp(2), dp(2), dp(2), dp(2));
+        int gap = dp(keyGapDp());
+        lp.setMargins(gap, dp(2), gap, dp(2));
         row.addView(b, lp);
         if ("⌫".equals(label)) {
             // A tap deletes one character; holding the key repeats until the finger is lifted.

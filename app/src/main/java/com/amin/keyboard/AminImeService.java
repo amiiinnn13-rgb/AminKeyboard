@@ -3,48 +3,150 @@ package com.amin.keyboard;
 import android.inputmethodservice.InputMethodService;
 import android.view.View;
 import android.view.inputmethod.InputConnection;
+import android.view.inputmethod.EditorInfo;
 import android.text.TextUtils;
 
 public class AminImeService extends InputMethodService {
     private boolean english = false;
     private static final String TATWEEL = "ــــ"; // exactly four U+0640 characters
+    private char lastTypedChar = 0;
+    private boolean hasLastTypedChar = false;
+    private int lastKnownSelectionStart = -1;
 
-    @Override public View onCreateInputView() { return new AminKeyboardView(this, this); }
+    @Override
+    public View onCreateInputView() {
+        return new AminKeyboardView(this, this);
+    }
+
+    @Override
+    public void onStartInput(EditorInfo attribute, boolean restarting) {
+        super.onStartInput(attribute, restarting);
+        clearTypingCache();
+    }
+
+    @Override
+    public void onFinishInput() {
+        super.onFinishInput();
+        clearTypingCache();
+    }
+
+    @Override
+    public void onUpdateSelection(int oldSelStart, int oldSelEnd,
+                                  int newSelStart, int newSelEnd,
+                                  int candidatesStart, int candidatesEnd) {
+        super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
+                candidatesStart, candidatesEnd);
+
+        if (newSelStart != newSelEnd) {
+            clearTypingCache();
+            lastKnownSelectionStart = newSelStart;
+            return;
+        }
+
+        if (newSelStart == 0) {
+            clearTypingCache();
+            lastKnownSelectionStart = 0;
+            return;
+        }
+
+        InputConnection ic = getCurrentInputConnection();
+        CharSequence before = ic == null ? null : ic.getTextBeforeCursor(1, 0);
+        if (before != null && before.length() > 0) {
+            rememberChar(before.charAt(before.length() - 1));
+        } else if (lastKnownSelectionStart >= 0 && newSelStart != lastKnownSelectionStart) {
+            // The cursor moved but the editor did not expose its surrounding text.
+            clearTypingCache();
+        }
+        lastKnownSelectionStart = newSelStart;
+    }
 
     void typeText(String text) {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null || TextUtils.isEmpty(text)) return;
+
         if (!english && text.length() == 1) {
             char current = text.charAt(0);
             CharSequence before = ic.getTextBeforeCursor(1, 0);
-            if (before != null && before.length() == 1) {
-                char previous = before.charAt(0);
-                if (canJoinForward(previous) && canReceive(current)) ic.commitText(TATWEEL + text, 1);
-                else ic.commitText(text, 1);
-            } else ic.commitText(text, 1);
-        } else ic.commitText(text, 1);
+            char previous = 0;
+            boolean hasPrevious = false;
+
+            if (before != null && before.length() > 0) {
+                previous = before.charAt(before.length() - 1);
+                hasPrevious = true;
+            } else if (hasLastTypedChar) {
+                previous = lastTypedChar;
+                hasPrevious = true;
+            }
+
+            String committed = hasPrevious
+                    && canJoinForward(previous) && canReceive(current)
+                    ? TATWEEL + text : text;
+
+            ic.commitText(committed, 1);
+            rememberChar(current);
+            if (lastKnownSelectionStart >= 0) {
+                lastKnownSelectionStart += committed.length();
+            }
+        } else {
+            ic.commitText(text, 1);
+            if (text.length() == 1) rememberChar(text.charAt(0));
+            else clearTypingCache();
+            if (lastKnownSelectionStart >= 0) {
+                lastKnownSelectionStart += text.length();
+            }
+        }
     }
 
     void backspace() {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null) return;
+
         CharSequence before = ic.getTextBeforeCursor(32, 0);
-        if (before == null || before.length() == 0) return;
+        if (before == null || before.length() == 0) {
+            if (lastKnownSelectionStart == 0) clearTypingCache();
+            return;
+        }
+
         int remove = 1;
         int i = before.length() - 2;
-        while (i >= 0 && before.charAt(i) == '\u0640') { remove++; i--; }
+        while (i >= 0 && before.charAt(i) == '\u0640') {
+            remove++;
+            i--;
+        }
         ic.deleteSurroundingText(remove, 0);
+
+        CharSequence remaining = ic.getTextBeforeCursor(1, 0);
+        if (remaining != null && remaining.length() > 0) {
+            rememberChar(remaining.charAt(remaining.length() - 1));
+        } else if (lastKnownSelectionStart <= remove) {
+            clearTypingCache();
+        }
+        if (lastKnownSelectionStart >= 0) {
+            lastKnownSelectionStart = Math.max(0, lastKnownSelectionStart - remove);
+        }
     }
 
-    void setEnglish(boolean value) { english = value; }
+    void setEnglish(boolean value) {
+        english = value;
+        clearTypingCache();
+    }
+
+    private void rememberChar(char c) {
+        lastTypedChar = c;
+        hasLastTypedChar = true;
+    }
+
+    private void clearTypingCache() {
+        lastTypedChar = 0;
+        hasLastTypedChar = false;
+    }
 
     private boolean canJoinForward(char c) {
-        // Persian/Arabic dual-joining letters. Right-joining-only letters are deliberately excluded.
         String dual = "بتثجحخسشصضطظعغفقكلمنهيپچژگک";
         return dual.indexOf(c) >= 0;
     }
+
     private boolean canReceive(char c) {
-        // Letters that can accept a connection from the preceding letter.
         String receive = "ابتثجحخدذرزسشصضطظعغفقکلمنوهىيپچژگک";
         return receive.indexOf(c) >= 0;
     }

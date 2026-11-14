@@ -84,7 +84,7 @@ public class AminKeyboardView extends LinearLayout {
 
     private int keyboardHeightDp() {
         float h = getResources().getDisplayMetrics().heightPixels / getResources().getDisplayMetrics().density;
-        return Math.round(Math.max(300f, Math.min(330f, h * 0.39f)));
+        return Math.round(Math.max(330f, Math.min(370f, h * 0.44f)));
     }
 
     private void render() {
@@ -256,23 +256,27 @@ public class AminKeyboardView extends LinearLayout {
         row.addView(dot, lp);
 
         final boolean[] opened = {false};
+        final boolean[] holding = {false};
         final Runnable showPanel = () -> {
-            if (!dot.isPressed()) return;
+            if (!holding[0]) return;
             opened[0] = true;
             showDiacriticsPanel();
         };
         dot.setOnTouchListener((v, event) -> {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
+                    holding[0] = true;
                     opened[0] = false;
                     deleteHandler.removeCallbacks(showPanel);
                     deleteHandler.postDelayed(showPanel, 2000);
                     return true;
                 case MotionEvent.ACTION_UP:
+                    holding[0] = false;
                     deleteHandler.removeCallbacks(showPanel);
                     if (!opened[0]) service.typeTextRaw(".");
                     return true;
                 case MotionEvent.ACTION_CANCEL:
+                    holding[0] = false;
                     deleteHandler.removeCallbacks(showPanel);
                     return true;
                 default:
@@ -300,7 +304,7 @@ public class AminKeyboardView extends LinearLayout {
         Button b = new Button(getContext());
         b.setText(label);
         b.setAllCaps(false);
-        b.setTextSize(label.length() > 2 ? 13 : 21);
+        b.setTextSize(label.length() > 2 ? 15 : 23);
         b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         b.setPadding(0, 0, 0, 0);
         b.setMinWidth(0);

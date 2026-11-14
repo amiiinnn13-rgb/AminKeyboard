@@ -100,6 +100,12 @@ public class AminImeService extends InputMethodService {
     void backspace() {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null) return;
+        CharSequence selected = ic.getSelectedText(0);
+        if (selected != null && selected.length() > 0) {
+            ic.commitText("", 1);
+            clearTypingCache();
+            return;
+        }
         CharSequence before = ic.getTextBeforeCursor(96, 0);
         if (before == null || before.length() == 0) {
             if (lastKnownSelectionStart == 0) clearTypingCache();

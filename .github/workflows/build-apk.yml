@@ -103,7 +103,7 @@ jobs:
           TYPO_STORE_PASSWORD: ${{ secrets.TYPO_STORE_PASSWORD }}
           TYPO_KEY_ALIAS: ${{ secrets.TYPO_KEY_ALIAS }}
         run: |
-          keytool -list -keystore "$RUNNER_TEMP/typo-release-key.jks" -storepass "$TYPO_STORE_PASSWORD" -alias "$TYPO_KEY_ALIAS" >/dev/null
+          keytool -list -keystore "$RUNNER_TEMP/typo-release-key.jks" -storepass "$TYPO_STORE_PASSWORD" -alias "$TYPO_KEY_ALIAS"
           echo "Keystore password and alias validated."
 
       - name: Build signed release APK

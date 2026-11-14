@@ -97,6 +97,15 @@ jobs:
           print("Private signing material prepared on the temporary runner.")
           PY
 
+      - name: Validate keystore password
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TYPO_STORE_PASSWORD: ${{ secrets.TYPO_STORE_PASSWORD }}
+          TYPO_KEY_ALIAS: ${{ secrets.TYPO_KEY_ALIAS }}
+        run: |
+          keytool -list -keystore "$RUNNER_TEMP/typo-release-key.jks" -storepass "$TYPO_STORE_PASSWORD" -alias "$TYPO_KEY_ALIAS" >/dev/null
+          echo "Keystore password and alias validated."
+
       - name: Build signed release APK
         if: github.event_name == 'workflow_dispatch'
         run: gradle --no-daemon assembleRelease

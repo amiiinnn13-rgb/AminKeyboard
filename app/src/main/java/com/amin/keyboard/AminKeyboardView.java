@@ -43,7 +43,7 @@ public class AminKeyboardView extends LinearLayout {
         super(context);
         this.service = service;
         setOrientation(VERTICAL);
-        // Extra bottom inset raises the key surfaces above the phone's gesture/navigation area.
+        // Extra bottom inset raises the keys above the phone's navigation/gesture area.
         setPadding(dp(4), dp(8), dp(4), dp(28));
         setBackgroundColor(Color.rgb(225, 229, 235));
         render();
@@ -69,7 +69,7 @@ public class AminKeyboardView extends LinearLayout {
                 for (String emoji : row) addKey(line, emoji, 1, () -> service.typeTextRaw(emoji));
                 addView(line, new LayoutParams(-1, rowHeight));
             }
-            addBottomRow(rowHeight, true);
+            addBottomRow(rowHeight);
             return;
         }
 
@@ -79,7 +79,7 @@ public class AminKeyboardView extends LinearLayout {
                 for (String key : row) addKey(line, key, 1, () -> service.typeTextRaw(key));
                 addView(line, new LayoutParams(-1, rowHeight));
             }
-            addBottomRow(rowHeight, false);
+            addBottomRow(rowHeight);
             return;
         }
 
@@ -92,25 +92,36 @@ public class AminKeyboardView extends LinearLayout {
                     if (!shifted) capsLock = false;
                     render();
                 }, () -> {
-                    capsLock = !capsLock;
-                    shifted = capsLock;
+                    if (english) {
+                        capsLock = !capsLock;
+                        shifted = capsLock;
+                    } else {
+                        shifted = !shifted;
+                    }
                     render();
                 });
             }
-            for (String original : rows[i]) {
-                String key = english && shifted ? original.toUpperCase() : original;
-                addKey(line, key, 10, () -> {
-                    service.typeText(key);
-                    if (english && shifted && !capsLock) {
-                        shifted = false;
-                        render();
-                    }
-                });
+
+            if (i == 2 && !english && shifted) {
+                for (String mark : diacritics) {
+                    addKey(line, mark, 10, () -> service.typeTextRaw(mark));
+                }
+            } else {
+                for (String original : rows[i]) {
+                    String key = english && shifted ? original.toUpperCase() : original;
+                    addKey(line, key, 10, () -> {
+                        service.typeText(key);
+                        if (english && shifted && !capsLock) {
+                            shifted = false;
+                            render();
+                        }
+                    });
+                }
             }
             if (i == 2) addKey(line, "⌫", 13, () -> service.backspace());
             addView(line, new LayoutParams(-1, rowHeight));
         }
-        addBottomRow(rowHeight, false);
+        addBottomRow(rowHeight);
     }
 
     private LinearLayout newRow() {
@@ -120,7 +131,7 @@ public class AminKeyboardView extends LinearLayout {
         return line;
     }
 
-    private void addBottomRow(int rowHeight, boolean emojiPage) {
+    private void addBottomRow(int rowHeight) {
         LinearLayout bottom = newRow();
         addKey(bottom, page == 1 ? "ABC" : "?123", 12, () -> {
             page = page == 1 ? 0 : 1;
@@ -144,16 +155,6 @@ public class AminKeyboardView extends LinearLayout {
         addKey(bottom, "⌫", 10, () -> service.backspace());
         addKey(bottom, "↵", 10, () -> service.typeTextRaw("\n"));
         addView(bottom, new LayoutParams(-1, rowHeight));
-
-        if (!english && page == 0) {
-            LinearLayout marks = newRow();
-            for (String mark : diacritics) {
-                addKey(marks, mark, 1, () -> service.typeTextRaw(mark));
-            }
-            // Keep diacritics accessible on the Persian shifted layer without taking another row.
-            // They are also shown in a compact strip when Persian is active.
-            addView(marks, 0, new LayoutParams(-1, dp(0)));
-        }
     }
 
     private void addKey(LinearLayout row, String label, int weight, Runnable action) {

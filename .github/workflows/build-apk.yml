@@ -80,6 +80,11 @@ jobs:
           p.write_text(s, encoding="utf-8")
           PY
 
+      - name: Restore Typo settings, Persian branding and launcher icon metadata
+        run: |
+          install -D build-patches/MainActivity.java app/src/main/java/com/amin/keyboard/MainActivity.java
+          install -D build-patches/AndroidManifest.xml app/src/main/AndroidManifest.xml
+
       - name: Install Android SDK packages
         run: |
           SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)

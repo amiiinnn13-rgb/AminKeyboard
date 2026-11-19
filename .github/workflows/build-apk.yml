@@ -53,6 +53,30 @@ jobs:
               "        release {\n            if (releaseKeystorePropertiesFile.exists()) {\n                signingConfig signingConfigs.release\n            }\n        }",
               1
           )
+          old_icon_task = """tasks.register('decodeLauncherIcon') {
+              doLast {
+                  def encodedIcon = file('src/main/assets/typo_icon.jpg.b64').getText('UTF-8').trim()
+                  def iconFile = file('src/main/res/mipmap-xhdpi/ic_launcher.jpg')
+                  iconFile.parentFile.mkdirs()
+                  iconFile.bytes = encodedIcon.decodeBase64()
+              }
+          }"""
+          new_icon_task = """tasks.register('decodeLauncherIcon') {
+              doLast {
+                  def iconDir = file('src/main/res/mipmap-xhdpi')
+                  iconDir.mkdirs()
+                  def encodedIconFile = file('src/main/assets/typo_icon.jpg.b64')
+                  if (encodedIconFile.exists()) {
+                      def iconFile = file('src/main/res/mipmap-xhdpi/ic_launcher.jpg')
+                      iconFile.bytes = encodedIconFile.getText('UTF-8').trim().decodeBase64()
+                  } else {
+                      def fallbackIcon = file('src/main/res/mipmap-xhdpi/ic_launcher.png')
+                      fallbackIcon.bytes = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aQAAAABJRU5ErkJggg=='.decodeBase64()
+                  }
+              }
+          }"""
+          if old_icon_task in s:
+              s = s.replace(old_icon_task, new_icon_task, 1)
           p.write_text(s, encoding="utf-8")
           PY
 

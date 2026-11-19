@@ -27,51 +27,6 @@ jobs:
         run: |
           cat .build-source/part-*.b64 | base64 --decode | tar -xz
           base64 --decode .build-source/patch-service.b64 | tar -xj
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("app/build.gradle")
-          s = p.read_text(encoding="utf-8")
-          s = s.replace(
-              """if (!releaseKeystorePropertiesFile.exists()) {
-              throw new GradleException('Missing root keystore.properties; refusing to create an unsigned release APK.')
-          }
-          releaseKeystorePropertiesFile.withInputStream { releaseKeystoreProperties.load(it) }""",
-              """def releaseBuildRequested = gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }
-          if (releaseBuildRequested && !releaseKeystorePropertiesFile.exists()) {
-              throw new GradleException('Missing root keystore.properties; refusing to create an unsigned release APK.')
-          }
-          if (releaseKeystorePropertiesFile.exists()) {
-              releaseKeystorePropertiesFile.withInputStream { releaseKeystoreProperties.load(it) }
-          }"""
-          )
-          s = s.replace(
-              """        release {
-                      storeFile file(releaseKeystoreProperties.getProperty('storeFile'))
-                      storePassword releaseKeystoreProperties.getProperty('storePassword')
-                      keyAlias releaseKeystoreProperties.getProperty('keyAlias')
-                      keyPassword releaseKeystoreProperties.getProperty('keyPassword')
-                  }""",
-              """        release {
-                      if (releaseKeystorePropertiesFile.exists()) {
-                          storeFile file(releaseKeystoreProperties.getProperty('storeFile'))
-                          storePassword releaseKeystoreProperties.getProperty('storePassword')
-                          keyAlias releaseKeystoreProperties.getProperty('keyAlias')
-                          keyPassword releaseKeystoreProperties.getProperty('keyPassword')
-                      }
-                  }"""
-          )
-          s = s.replace(
-              """        release {
-                      signingConfig signingConfigs.release
-                  }""",
-              """        release {
-                      if (releaseKeystorePropertiesFile.exists()) {
-                          signingConfig signingConfigs.release
-                      }
-                  }"""
-          )
-          p.write_text(s, encoding="utf-8")
-          PY
 
       - name: Install Android SDK packages
         run: |
@@ -143,6 +98,7 @@ jobs:
               encoding="ISO-8859-1"
           )
           print("Private signing material prepared on the temporary runner.")
+          Path("app/keystore.properties").write_text(Path("keystore.properties").read_text(encoding="ISO-8859-1"), encoding="ISO-8859-1")
           Path("app/keystore.properties").write_text(Path("keystore.properties").read_text(encoding="ISO-8859-1"), encoding="ISO-8859-1")
           PY
 

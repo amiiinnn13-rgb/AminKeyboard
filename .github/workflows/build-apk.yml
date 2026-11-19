@@ -71,7 +71,7 @@ jobs:
                       iconFile.bytes = encodedIconFile.getText('UTF-8').trim().decodeBase64()
                   } else {
                       def fallbackIcon = file('src/main/res/mipmap-xhdpi/ic_launcher.png')
-                      fallbackIcon.bytes = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aQAAAABJRU5ErkJggg=='.decodeBase64()
+                      fallbackIcon.bytes = 'iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAACcElEQVR42u3ZMUojURjA8cmQKsfQoyzY2glaWQTL1HYia6GVEFBQBL2Cd9hlT+GCR/AE2WoLQ6Iz782bvDfz+3UKm8nO98/3kjh5/1itKkardgsEgAAQAAJAAAiAMZn2daHDxdLdbul1uUh+jUnKL4IMPf8YOg/A0MuKoTb88nR5nzvZAE2e0OX5mcm1dHH9mHwbRAfw1fANvZ8YYiKICmDb8A2+/xBCI6gNvyzb7m/o+4KgDbDpYgafxzZouwlqwx/WNmi7CeoUT4LdHwlJAvA5f3jfE9QxD+rVX/5RUHd5Uco7Cvw5eOQaBbC+Trz6y9gCTY4BG8AGQADW/2iPARvABkAACAABIAAEgAAYj2muT+zl6an68+v3IG7y0clx9ePgwAZAAAgAASAABIAAEAACQADsSLZfBZ/O59XpfB79OH/f3qqbn1dB//b2/q6azWY2AAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAApDQd+n9wb3+/enh5NmkbAAEgAASAABAAAkAAAnALBIAAEAAC2OR1ufj088X1o7uWsfX5rM/PBkAAtAzAMTDM9W8DEB6ALZD3q7/zADatExHkO/wm67/1Bmj6oOxWmznVKeoj/9UfHICjYBir/7/J+8dqFXLxw8Vy4+8vz89MZkev+pAjOvgI2HYx26Cc4UdtgO82gW3Q31kf8+Y8OoDvIhBD2jd4sZ/MOgmgTQj0/1Ev6cdA3xOUO/zON4CNUMbQewtADPlv1N4CIE/+HCwABIAAEAACYGz+AWxT1uuQP3U2AAAAAElFTkSuQmCC'.decodeBase64()
                   }
               }
           }"""

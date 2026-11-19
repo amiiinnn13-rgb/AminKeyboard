@@ -26,6 +26,7 @@ jobs:
       - name: Restore the updated keyboard source
         run: |
           cat .build-source/part-*.b64 | base64 --decode | tar -xz
+          base64 --decode .build-source/patch-service.b64 | tar -xj
 
       - name: Install Android SDK packages
         run: |

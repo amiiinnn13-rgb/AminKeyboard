@@ -27,6 +27,34 @@ jobs:
         run: |
           cat .build-source/part-*.b64 | base64 --decode | tar -xz
           base64 --decode .build-source/patch-service.b64 | tar -xj
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path("app/build.gradle")
+          s = p.read_text(encoding="utf-8")
+          s = s.replace(
+              "if (!releaseKeystorePropertiesFile.exists()) {",
+              "def releaseBuildRequested = gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }\nif (releaseBuildRequested && !releaseKeystorePropertiesFile.exists()) {",
+              1
+          )
+          s = s.replace(
+              "}\nreleaseKeystorePropertiesFile.withInputStream { releaseKeystoreProperties.load(it) }",
+              "}\nif (releaseKeystorePropertiesFile.exists()) {\n    releaseKeystorePropertiesFile.withInputStream { releaseKeystoreProperties.load(it) }\n}",
+              1
+          )
+          s = re.sub(
+              r"        release \{\n            storeFile file\(releaseKeystoreProperties\.getProperty\('storeFile'\)\)\n            storePassword releaseKeystoreProperties\.getProperty\('storePassword'\)\n            keyAlias releaseKeystoreProperties\.getProperty\('keyAlias'\)\n            keyPassword releaseKeystoreProperties\.getProperty\('keyPassword'\)\n        \}",
+              "        release {\n            if (releaseKeystorePropertiesFile.exists()) {\n                storeFile file(releaseKeystoreProperties.getProperty('storeFile'))\n                storePassword releaseKeystoreProperties.getProperty('storePassword')\n                keyAlias releaseKeystoreProperties.getProperty('keyAlias')\n                keyPassword releaseKeystoreProperties.getProperty('keyPassword')\n            }\n        }",
+              s,
+              count=1
+          )
+          s = s.replace(
+              "        release {\n            signingConfig signingConfigs.release\n        }",
+              "        release {\n            if (releaseKeystorePropertiesFile.exists()) {\n                signingConfig signingConfigs.release\n            }\n        }",
+              1
+          )
+          p.write_text(s, encoding="utf-8")
+          PY
 
       - name: Install Android SDK packages
         run: |

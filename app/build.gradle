@@ -8,8 +8,16 @@ android {
         applicationId 'com.amin.keyboard'
         minSdk 23
         targetSdk 35
-        versionCode 1
-        versionName '1.0'
+        versionCode 101
+        versionName '1.0.1-test'
+    }
+
+    buildTypes {
+        debug {
+            // Keep the test APK side-by-side with the installed signed release.
+            applicationIdSuffix '.test'
+            versionNameSuffix '-test'
+        }
     }
 
     compileOptions {

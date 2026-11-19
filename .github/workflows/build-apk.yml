@@ -82,10 +82,10 @@ jobs:
           import hashlib
           print("Keystore SHA256: " + hashlib.sha256(key_bytes).hexdigest())
           def escape_property(value):
-              value = value.replace("\\\\", "\\\\\\\\").replace("\\t", "\\\\t").replace("\\n", "\\\\n").replace("\\r", "\\\\r")
-              value = value.replace(":", "\\\\:").replace("=", "\\\\=")
+              value = value.replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n").replace("\r", "\\r")
+              value = value.replace(":", "\\:").replace("=", "\\=")
               if value.startswith(" "):
-                  value = "\\\\ " + value[1:]
+                  value = "\\ " + value[1:]
               return value
           props = {
               "storeFile": str(key_path),
@@ -94,7 +94,7 @@ jobs:
               "keyPassword": os.environ["TYPO_KEY_PASSWORD"],
           }
           Path("keystore.properties").write_text(
-              "".join(f"{k}={escape_property(v)}\\n" for k, v in props.items()),
+              "".join(f"{k}={escape_property(v)}\n" for k, v in props.items()),
               encoding="ISO-8859-1"
           )
           print("Private signing material prepared on the temporary runner.")
